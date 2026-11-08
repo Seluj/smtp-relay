@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relais SMTP</title>
+<style>
+  :root {
+    --bg: #f4f6fa; --card: #fff; --border: #e2e7ef; --side: #172033; --side-hi: #2a3854; --side-hover: #1f2a40;
+    --text: #1e293b; --muted: #64748b; --accent: #2563eb; --green: #16a34a; --amber: #d97706; --red: #dc2626;
+    --input: #fafbfd; --input-border: #d0d7e2;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, "Helvetica Neue", Arial, sans-serif; color: var(--text); background: var(--bg); }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  .app { display: flex; min-height: 100vh; }
+  aside { width: 230px; flex: none; background: var(--side); color: #cbd5e1; padding: 20px 14px 14px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
+  .brand { display: flex; gap: 11px; align-items: center; margin-bottom: 24px; }
+  .logo { width: 36px; height: 36px; border-radius: 9px; background: var(--accent); display: grid; place-items: center; }
+  .logo svg { width: 20px; height: 20px; }
+  .brand b { display: block; color: #fff; font-size: 17px; font-weight: 600; }
+  .brand small { color: #94a3b8; font-size: 12px; }
+  nav a { display: flex; align-items: center; gap: 12px; padding: 9px 12px; margin-bottom: 3px; border-radius: 8px; color: #cbd5e1; text-decoration: none; position: relative; cursor: pointer; }
+  nav a:hover { background: var(--side-hover); }
+  nav a.on { background: var(--side-hi); color: #fff; }
+  nav a.on::before { content: ""; position: absolute; left: 0; top: 9px; bottom: 9px; width: 3px; border-radius: 2px; background: var(--accent); }
+  nav svg { width: 18px; height: 18px; flex: none; opacity: .9; }
+  nav .badge { margin-left: auto; font-size: 12px; color: #fff; border-radius: 10px; padding: 0 8px; }
+  .side-foot { margin-top: auto; font-size: 13px; display: flex; flex-direction: column; gap: 10px; }
+  .side-foot button { background: none; border: 1px solid #334155; color: #cbd5e1; border-radius: 7px; padding: 5px 10px; cursor: pointer; text-align: left; }
+  .side-foot button:hover { background: var(--side-hover); }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+  main { flex: 1; padding: 24px 30px 90px; min-width: 0; }
+  h1 { font-size: 26px; font-weight: 600; margin: 0; }
+  .sub { color: var(--muted); margin: 2px 0 18px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; margin-bottom: 14px; }
+  .card h2 { font-size: 16.5px; font-weight: 600; margin: 0 0 8px; }
+  .row { display: flex; gap: 14px; align-items: center; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 14px; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+  .btn { border: 1px solid var(--input-border); background: #eef1f6; border-radius: 7px; padding: 6px 13px; cursor: pointer; white-space: nowrap; }
+  .btn:hover { border-color: var(--accent); }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; padding: 8px 18px; }
+  .btn.primary:hover { background: #1d4ed8; }
+  .btn.sm { padding: 2px 9px; font-size: 13px; }
+  .btn.danger:hover { border-color: var(--red); color: var(--red); }
+  .link { color: var(--accent); cursor: pointer; background: none; border: 0; padding: 0; }
+  .status { display: flex; align-items: center; gap: 16px; }
+  .halo { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+  .halo i { width: 18px; height: 18px; border-radius: 50%; }
+  .status h3 { margin: 0; font-size: 19px; font-weight: 600; }
+  .banner { display: flex; align-items: center; gap: 12px; border-radius: 10px; padding: 11px 16px; margin-bottom: 14px; border: 1px solid; }
+  .banner span { flex: 1; }
+  .stat { display: flex; gap: 12px; align-items: center; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .stat i { width: 4px; height: 46px; border-radius: 2px; }
+  .stat b { font-size: 28px; font-weight: 600; display: block; line-height: 1.1; }
+  .stat span { font-size: 13.5px; color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 13px; color: var(--muted); font-weight: 600; padding: 6px 10px; border-bottom: 1px solid var(--border); }
+  td { padding: 9px 10px; border-bottom: 1px solid #f0f2f6; vertical-align: middle; }
+  tr:last-child td { border-bottom: 0; }
+  .ell { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pill { display: inline-block; border-radius: 10px; padding: 2px 10px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+  .kv { display: grid; grid-template-columns: 130px 1fr auto; gap: 9px 14px; align-items: center; margin-top: 10px; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13.5px; }
+  .form { display: grid; grid-template-columns: 200px 1fr; gap: 14px 24px; align-items: start; }
+  .form > label { font-weight: 600; padding-top: 6px; }
+  .form .help { display: block; font-weight: 400; color: var(--muted); font-size: 12.5px; }
+  input[type=text], input[type=password], input[type=number], input[type=email], select, textarea {
+    background: var(--input); border: 1px solid var(--input-border); border-radius: 7px; padding: 6px 10px; width: 300px; max-width: 100%;
+  }
+  input[type=number] { width: 110px; }
+  textarea { width: 300px; min-height: 76px; resize: vertical; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid rgba(37,99,235,.25); border-color: var(--accent); }
+  .opt { display: flex; gap: 8px; align-items: baseline; margin-bottom: 4px; }
+  .opt small { display: block; color: var(--muted); }
+  .hint { color: var(--accent); font-size: 13px; }
+  .warn { color: var(--amber); }
+  .savebar { position: fixed; left: 230px; right: 0; bottom: 0; background: #fffbeb; border-top: 1px solid #fde68a; padding: 11px 30px; display: none; align-items: center; gap: 10px; z-index: 5; }
+  .savebar.show { display: flex; }
+  .savebar b { color: #92400e; flex: 1; font-weight: 600; }
+  .toast { position: fixed; right: 24px; top: 20px; max-width: 440px; padding: 11px 16px; border-radius: 8px; border: 1px solid; z-index: 20; display: none; }
+  .toast.ok { display: block; background: #f0fdf4; border-color: var(--green); color: #15803d; }
+  .toast.bad { display: block; background: #fef2f2; border-color: var(--red); color: #b91c1c; }
+  .empty { text-align: center; color: var(--muted); padding: 26px 0; }
+  .filters { display: flex; gap: 6px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .chip { border: 1px solid transparent; background: none; padding: 5px 12px; border-radius: 7px; cursor: pointer; }
+  .chip.on { background: rgba(37,99,235,.12); color: var(--accent); border-color: rgba(37,99,235,.35); }
+  ol.steps { margin: 4px 0 0; padding-left: 22px; }
+  ol.steps li { margin: 5px 0; }
+  ol.steps li::marker { color: var(--accent); font-weight: 600; }
+  code { background: #eef2f7; padding: 1px 6px; border-radius: 5px; font-size: 13.5px; }
+  .modal-bg { position: fixed; inset: 0; background: rgba(15,23,42,.45); display: none; align-items: center; justify-content: center; z-index: 10; }
+  .modal-bg.show { display: flex; }
+  .modal { background: #fff; border-radius: 12px; width: min(820px, 92vw); max-height: 88vh; display: flex; flex-direction: column; }
+  .modal header { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; }
+  .modal header b { flex: 1; font-size: 17px; }
+  .modal .body { padding: 14px 20px; overflow: auto; }
+  pre.raw { background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 12px; white-space: pre-wrap; word-break: break-all; font-size: 12.5px; max-height: 420px; overflow: auto; }
+  .login { min-height: 100vh; display: grid; place-items: center; background: var(--side); }
+  .login .card { width: 360px; padding: 28px; }
+  .login input { width: 100%; margin: 12px 0; }
+  .log-line { display: flex; gap: 10px; align-items: baseline; padding: 3px 0; }
+  .log-line .t { color: var(--muted); font-family: ui-monospace, Menlo, monospace; font-size: 13px; flex: none; }
+  .recent { display: flex; gap: 12px; align-items: center; padding: 5px 0; }
+  .recent div { min-width: 0; }
+  .recent b { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  @media (max-width: 900px) { .grid2, .grid4 { grid-template-columns: 1fr 1fr; } .form { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div class="savebar" id="savebar"><b>⚠ Modifications non enregistrées</b><button class="btn" onclick="revert()">Annuler</button><button class="btn primary" onclick="save()">Enregistrer</button></div>
+<div class="toast" id="toast"></div>
+<div class="modal-bg" id="modal" onclick="if(event.target===this)closeModal()"><div class="modal"><header><b id="modal-title"></b><button class="btn" onclick="closeModal()">Fermer</button></header><div class="body" id="modal-body"></div></div></div>
+
+<script>
+"use strict";
+const ICONS = {
+  tableau: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  messages: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="m2 7 10 6 10-6"/>',
+  reception: '<path d="M12 3v12m0 0-4-4m4 4 4-4M4 15v4h16v-4"/>',
+  comptes: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M16.5 14.5c2.6 0 4.4 1.7 5 4.5"/>',
+  envoi: '<path d="m22 2-7 20-4-9-9-4 20-7Z"/><path d="M22 2 11 13"/>',
+  journal: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+  aide: '<circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4.5M12 17.5h.01"/>',
+};
+const PAGES = [
+  ["tableau", "Tableau de bord"], ["messages", "Messages"], ["reception", "Réception"],
+  ["comptes", "Comptes"], ["envoi", "Envoi"], ["journal", "Journal"], ["aide", "Aide"],
+];
+const FORM_PAGES = new Set(["reception", "comptes", "envoi"]);
+const STATUS = {
+  Queued: ["En attente", "var(--amber)"], Sending: ["Envoi…", "var(--amber)"], Sent: ["Envoyé", "var(--green)"],
+  Failed: ["Échec", "var(--red)"], Captured: ["Gardé (test)", "var(--accent)"],
+};
+const SECURITY = [["StartTls", "STARTTLS"], ["Tls", "SSL/TLS"], ["None", "Aucune"]];
+
+let S = null;            // dernier état reçu du serveur
+let draft = null;        // réglages en cours de modification
+let page = (location.hash || "#tableau").slice(1);
+let filter = "all", search = "", needLogin = false, testing = false, showPw = {}, renderedPage = null;
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const clone = (o) => JSON.parse(JSON.stringify(o));
+const dirty = () => draft && S && JSON.stringify(draft) !== JSON.stringify(S.config);
+
+function fmtTime(ts) {
+  if (!ts) return "-";
+  const d = new Date(ts * 1000), now = new Date();
+  const p = (n) => String(n).padStart(2, "0");
+  const hm = `${p(d.getHours())}:${p(d.getMinutes())}`;
+  return d.toDateString() === now.toDateString() ? `${hm}:${p(d.getSeconds())}` : `${p(d.getDate())}/${p(d.getMonth() + 1)} ${hm}`;
+}
+
+async function api(path, method = "GET", body) {
+  const opt = { method, headers: {} };
+  if (method !== "GET") { opt.headers["Content-Type"] = "application/json"; opt.body = JSON.stringify(body ?? {}); }
+  const r = await fetch("/api/" + path, opt);
+  let data = {};
+  try { data = await r.json(); } catch (_) {}
+  if (r.status === 401 && path !== "login") { needLogin = true; render(true); throw new Error("identification requise"); }
+  if (!r.ok) throw new Error(data.error || ("erreur " + r.status));
+  return data;
+}
+
+function toast(text, ok = true) {
+  const t = $("toast");
+  t.className = "toast " + (ok ? "ok" : "bad");
+  t.textContent = (ok ? "✔ " : "✖ ") + text;
+  clearTimeout(t._h);
+  t._h = setTimeout(() => (t.className = "toast"), 6000);
+}
+
+async function refresh() {
+  try {
+    S = await api("state");
+    needLogin = false;
+    if (!draft || !dirty()) draft = clone(S.config);
+    render(false);
+  } catch (e) { if (!needLogin) console.warn(e); }
+}
+
+function go(p) { page = p; location.hash = p; render(true); window.scrollTo(0, 0); }
+window.addEventListener("hashchange", () => { const p = location.hash.slice(1); if (p && p !== page) { page = p; render(true); } });
+
+// ------------------------------------------------------------------ rendu
+
+function render(force) {
+  const root = $("root");
+  if (needLogin) { root.innerHTML = loginView(); $("savebar").className = "savebar"; setTimeout(() => $("pw")?.focus(), 0); renderedPage = "login"; return; }
+  if (!S) { root.innerHTML = '<div class="empty">Chargement…</div>'; return; }
+  if (!PAGES.some(([k]) => k === page)) page = "tableau";
+  // Les pages de réglages ne sont redessinées qu'en changeant de page (pour ne pas perdre la saisie).
+  if (!force && renderedPage === page && FORM_PAGES.has(page)) { root.querySelector("aside").outerHTML = sidebar(); updateSaveBar(); return; }
+  const views = { tableau: dashboard, messages: messagesView, reception: receptionView, comptes: accountsView, envoi: sendingView, journal: journalView, aide: helpView };
+  const focusId = document.activeElement?.id;
+  root.innerHTML = `<div class="app">${sidebar()}<main>${views[page]()}</main></div>`;
+  if (focusId && $(focusId)) { const el = $(focusId); el.focus(); if (el.setSelectionRange && el.type === "text") el.setSelectionRange(el.value.length, el.value.length); }
+  renderedPage = page;
+  updateSaveBar();
+}
+
+function updateSaveBar() { $("savebar").className = "savebar" + (dirty() ? " show" : ""); }
+
+function svg(k) { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[k]}</svg>`; }
+
+function sidebar() {
+  const st = S.stats;
+  const items = PAGES.map(([k, l]) => {
+    let badge = "";
+    if (k === "messages" && st.failed) badge = `<span class="badge" style="background:var(--red)">${st.failed}</span>`;
+    else if (k === "messages" && st.waiting) badge = `<span class="badge" style="background:var(--amber)">${st.waiting}</span>`;
+    return `<a class="${k === page ? "on" : ""}" onclick="go('${k}')">${svg(k)}${l}${badge}</a>`;
+  }).join("");
+  const run = S.server.running, errored = !!S.server.error;
+  const col = run ? "var(--green)" : errored ? "var(--red)" : "#94a3b8";
+  const txt = run ? `En marche · port ${S.config.port}` : errored ? "Erreur de démarrage" : "Arrêté";
+  return `<aside>
+    <div class="brand"><div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS.messages}</svg></div>
+      <div><b>Relais SMTP</b><small>pour vos applications</small></div></div>
+    <nav>${items}</nav>
+    <div class="side-foot"><div><span class="dot" style="background:${col}"></span>${txt}</div>
+      ${S.env.container ? '<div class="small" style="color:#94a3b8">Conteneur Docker · v' + esc(S.env.version) + "</div>" : ""}
+      <button onclick="logout()">Se déconnecter</button></div>
+  </aside>`;
+}
+
+function header(t, s) { return `<h1>${esc(t)}</h1><p class="sub">${esc(s)}</p>`; }
+
+function banner(color, text, label, target) {
+  return `<div class="banner" style="background:color-mix(in srgb, ${color} 8%, white);border-color:color-mix(in srgb, ${color} 40%, white)">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="${color}" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>
+    <span>${text}</span>${label ? `<button class="btn" onclick="go('${target}')">${esc(label)}</button>` : ""}</div>`;
+}
+
+function pill(status) { const [l, c] = STATUS[status] || [status, "var(--muted)"]; return `<span class="pill" style="color:${c};background:color-mix(in srgb, ${c} 12%, white)">${l}</span>`; }
+
+function appHost() {
+  const h = location.hostname;
+  if (!h || h === "localhost" || h === "127.0.0.1" || h === "::1" || h === "[::1]") return S.env.container ? "adresse-du-serveur" : S.env.local_ip;
+  return h;
+}
+
+function dashboard() {
+  const c = S.config, sv = S.server, st = S.stats;
+  const run = sv.running;
+  const col = run ? "var(--green)" : sv.error ? "var(--red)" : "var(--muted)";
+  const title = run ? "Le serveur fonctionne" : sv.error ? "Le serveur n'a pas pu démarrer" : "Le serveur est arrêté";
+  const detail = run ? `À l'écoute sur le port ${c.port} depuis ${fmtTime(sv.started_at)} · ${sv.connections} connexion(s)`
+    : sv.error ? `<span style="color:var(--red)">${esc(sv.error)}</span>` : "Démarrez-le pour que vos applications puissent envoyer des e-mails.";
+  let b;
+  if (c.mode === "Capture") b = banner("var(--amber)", "Mode test activé : les e-mails sont gardés dans « Messages » mais ne sont pas envoyés.", "Changer", "envoi");
+  else if (!c.relay.host) b = banner("var(--amber)", "L'envoi n'est pas encore configuré : indiquez le serveur de votre fournisseur (Gmail, OVH, Orange…).", "Configurer l'envoi", "envoi");
+  else b = banner("var(--accent)", `Les e-mails sont transmis via <b>${esc(c.relay.host)}</b> (port ${c.relay.port}, ${secLabel(c.relay.security)}).`, "Modifier", "envoi");
+  const acc = c.accounts.find((a) => a.enabled);
+  const rows = [["Serveur (hôte)", appHost()], ["Port", String(c.port)]];
+  const kv = rows.map(([k, v]) => kvRow(k, v)).join("") +
+    `<span class="muted">Chiffrement</span><b>Aucun (désactiver SSL/TLS)</b><span></span>` +
+    (acc && c.require_auth ? kvRow("Identifiant", acc.username) + kvRow("Mot de passe", acc.password) : `<span class="muted">Identifiant</span><b>non nécessaire</b><span></span>`);
+  const recent = S.messages.slice(0, 6).map((m) => `<div class="recent">${pill(m.status)}<div><b>${esc(m.subject)}</b><span class="small muted">${fmtTime(m.received)} · à ${esc(m.to.join(", "))}</span></div></div>`).join("")
+    || `<div class="empty"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#cbd5e1" stroke-width="2">${ICONS.messages}</svg><div>Aucun message pour l'instant</div><div class="small">Envoyez un e-mail de test depuis l'onglet « Envoi ».</div></div>`;
+  return header("Tableau de bord", "Recevez les e-mails de vos applications et transmettez-les à votre fournisseur de messagerie.") + `
+  <div class="card status">
+    <div class="halo" style="background:color-mix(in srgb, ${col} 15%, white)"><i style="background:${col}"></i></div>
+    <div style="flex:1"><h3>${title}</h3><div class="muted">${detail}</div></div>
+    ${run ? `<button class="btn" style="padding:8px 18px" onclick="serverCmd('stop')">■ Arrêter</button>` : `<button class="btn primary" onclick="serverCmd('start')">▶ Démarrer</button>`}
+  </div>
+  ${b}
+  <div class="grid4">
+    ${stat("Reçus aujourd'hui", st.today, "var(--accent)")}${stat("Envoyés", st.sent, "var(--green)")}${stat("En attente", st.waiting, "var(--amber)")}${stat("Échecs", st.failed, "var(--red)")}
+  </div>
+  <div class="grid2">
+    <div class="card"><h2>À indiquer dans vos applications</h2>
+      <div class="muted">Dolibarr, Immich, Nextcloud… : utilisez ces informations dans leurs réglages e-mail (SMTP).</div>
+      <div class="kv">${kv}</div></div>
+    <div class="card"><div class="row"><h2 style="flex:1">Derniers messages</h2><button class="link" onclick="go('messages')">Tout voir</button></div>${recent}</div>
+  </div>`;
+}
+
+function kvRow(k, v) { return `<span class="muted">${esc(k)}</span><b class="mono">${esc(v)}</b><button class="btn sm" onclick="copy(${esc(JSON.stringify(v))})">Copier</button>`; }
+function stat(l, n, c) { return `<div class="stat"><i style="background:${c}"></i><div><b>${n}</b><span>${l}</span></div></div>`; }
+function secLabel(s) { return (SECURITY.find(([k]) => k === s) || [s, s])[1]; }
+
+function messagesView() {
+  const q = search.toLowerCase();
+  const list = S.messages.filter((m) => filter === "all" || (filter === "waiting" && ["Queued", "Sending"].includes(m.status)) || (filter === "sent" && ["Sent", "Captured"].includes(m.status)) || (filter === "failed" && m.status === "Failed"))
+    .filter((m) => !q || (m.subject + m.from + m.to.join(",")).toLowerCase().includes(q));
+  const chips = [["all", "Tous"], ["waiting", "En attente"], ["sent", "Envoyés"], ["failed", "Échecs"]].map(([k, l]) => `<button class="chip ${filter === k ? "on" : ""}" onclick="filter='${k}';render(true)">${l}</button>`).join("");
+  const rows = list.slice(0, 300).map((m) => `<tr>
+      <td>${fmtTime(m.received)}</td>
+      <td class="ell" title="Envoyé par : ${esc(m.client)}">${esc(m.from || "(vide)")}</td>
+      <td class="ell" title="${esc(m.to.join("\n"))}">${esc(m.to.join(", "))}</td>
+      <td class="ell" style="max-width:320px">${esc(m.subject)}</td>
+      <td title="${esc(m.last_error ? m.attempts + " essai(s) — " + m.last_error : "")}">${pill(m.status)}</td>
+      <td style="white-space:nowrap"><button class="btn sm" onclick="showMessage(${m.id})">Voir</button>
+        ${["Failed", "Captured", "Sent"].includes(m.status) ? `<button class="btn sm" title="Renvoyer" onclick="msgCmd(${m.id},'retry')">↻</button>` : ""}
+        <button class="btn sm danger" title="Supprimer" onclick="msgCmd(${m.id},'delete')">✕</button></td></tr>`).join("");
+  return header("Messages", "Tous les e-mails reçus de vos applications, avec leur état d'envoi.") + `
+    <div class="filters">${chips}
+      <input type="text" id="search" placeholder="Rechercher (objet, adresse…)" value="${esc(search)}" oninput="search=this.value;render(true)" style="margin-left:10px;width:260px">
+      <span style="flex:1"></span>
+      ${S.stats.failed ? `<button class="btn" onclick="bulk('retry-failed')">↻ Réessayer les ${S.stats.failed} échecs</button>` : ""}
+      <button class="btn" onclick="bulk('clear')" title="Supprime de l'historique les messages envoyés ou gardés">Vider les envoyés</button>
+    </div>
+    <div class="card" style="padding:8px 10px">${list.length ? `<table><thead><tr><th>Reçu</th><th>De</th><th>À</th><th>Objet</th><th>État</th><th></th></tr></thead><tbody>${rows}</tbody></table>` : '<div class="empty">Aucun message</div>'}</div>`;
+}
+
+function field(label, help, control) { return `<label>${esc(label)}${help ? `<span class="help">${esc(help)}</span>` : ""}</label><div>${control}</div>`; }
+function input(path, attrs = "") { return `<input type="text" id="f-${path}" value="${esc(get(path))}" oninput="set('${path}', this.value)" ${attrs}>`; }
+function num(path, min, max, suffix = "") { return `<input type="number" id="f-${path}" min="${min}" max="${max}" value="${esc(get(path))}" oninput="set('${path}', Math.max(${min}, Math.min(${max}, parseInt(this.value)||${min})))"> ${suffix}`; }
+function check(path, label) { return `<label class="opt" style="font-weight:400"><input type="checkbox" ${get(path) ? "checked" : ""} onchange="set('${path}', this.checked)"> ${esc(label)}</label>`; }
+function get(path) { return path.split(".").reduce((o, k) => o?.[k], draft); }
+function set(path, value) {
+  const ks = path.split("."); let o = draft;
+  for (const k of ks.slice(0, -1)) o = o[k];
+  o[ks[ks.length - 1]] = value;
+  updateSaveBar();
+}
+
+function receptionView() {
+  const c = draft, ct = S.env.container;
+  const listen = ct ? `<div class="muted">Dans Docker, le relais écoute toujours sur tout le réseau ; l'accès se règle avec les ports publiés du conteneur.</div>`
+    : `<label class="opt"><input type="radio" name="la" ${c.listen_all ? "checked" : ""} onchange="set('listen_all', true)"> Tout le réseau local (autres ordinateurs, NAS, Docker)</label>
+       <label class="opt"><input type="radio" name="la" ${!c.listen_all ? "checked" : ""} onchange="set('listen_all', false)"> Cet ordinateur uniquement</label>`;
+  return header("Réception", "Comment vos applications se connectent à ce relais.") + `
+  <div class="card"><h2>Écoute</h2><div class="form">
+    ${field("Port", ct ? "Port SMTP à l'intérieur du conteneur. S'il change, adaptez aussi le port publié (docker-compose)." : "Le numéro à indiquer dans vos applications. 2525 ou 587 sont courants.", num("port", 1, 65535))}
+    ${field("Accessible depuis", "", listen)}
+    ${field("Nom du serveur", "Nom annoncé aux applications et au fournisseur. Laissez la valeur par défaut si vous ne savez pas.", input("hostname"))}
+    ${field("Taille maximale", "Les messages plus gros (pièces jointes) sont refusés.", num("max_size_mb", 1, 200, "Mo"))}
+    ${field("Démarrage", "", check("autostart", "Démarrer le serveur SMTP automatiquement"))}
+  </div></div>
+  <div class="card"><h2>Sécurité</h2><div class="form">
+    ${field("Identification", "Recommandé : seules les applications qui connaissent un identifiant et un mot de passe (onglet « Comptes ») peuvent envoyer.", check("require_auth", "Exiger un identifiant et un mot de passe"))}
+    ${field("Adresses de confiance", "Une par ligne. Ces adresses peuvent envoyer sans identifiant. Une adresse qui se termine par un point (ex. 172.17.) couvre tout un réseau.",
+      `<textarea id="f-trusted" placeholder="127.0.0.1&#10;192.168.1." oninput="set('trusted', this.value.split('\\n'))">${esc(c.trusted.join("\n"))}</textarea>`)}
+    ${field("Historique", "Nombre de messages gardés dans « Messages ».", num("history_limit", 10, 100000, "messages"))}
+  </div>
+  ${!c.require_auth ? '<p class="warn">⚠ Sans identification, toute machine qui atteint ce port peut envoyer des e-mails par ce relais. N\'ouvrez jamais ce port sur Internet.</p>' : ""}
+  </div>
+  <div class="card"><h2>Interface web</h2>
+    ${S.env.admin_from_env ? '<div class="muted">Le mot de passe de cette interface est fixé par la variable <code>ADMIN_PASSWORD</code> du conteneur.</div>' : `
+    <div class="form">
+      ${field("Mot de passe actuel", "", '<input type="password" id="pw-cur" autocomplete="current-password">')}
+      ${field("Nouveau mot de passe", "8 caractères minimum.", '<input type="password" id="pw-new" autocomplete="new-password">')}
+      <span></span><div><button class="btn" onclick="changePassword()">Changer le mot de passe</button></div>
+    </div>`}
+  </div>`;
+}
+
+function accountsView() {
+  const rows = draft.accounts.map((a, i) => `<tr>
+    <td><input type="checkbox" ${a.enabled ? "checked" : ""} onchange="draft.accounts[${i}].enabled=this.checked;updateSaveBar()"></td>
+    <td><input type="text" id="acc-u-${i}" value="${esc(a.username)}" placeholder="ex. dolibarr" oninput="draft.accounts[${i}].username=this.value;updateSaveBar()" style="width:150px"></td>
+    <td style="white-space:nowrap"><input type="${showPw[i] ? "text" : "password"}" id="acc-p-${i}" class="mono" value="${esc(a.password)}" oninput="draft.accounts[${i}].password=this.value;updateSaveBar()" style="width:150px">
+      <button class="btn sm" onclick="showPw[${i}]=!showPw[${i}];render(true)">${showPw[i] ? "Masquer" : "Afficher"}</button>
+      <button class="btn sm" onclick="copy(draft.accounts[${i}].password)">Copier</button>
+      <button class="btn sm" onclick="draft.accounts[${i}].password=randomPw();showPw[${i}]=true;render(true)">Générer</button></td>
+    <td><input type="text" id="acc-f-${i}" value="${esc(a.from || "")}" placeholder="${esc(draft.relay.force_from || "celui de l'application")}" title="Facultatif. Ex. Factures <factures@exemple.fr>. Vide = expéditeur de l'onglet « Envoi », ou celui de l'application." oninput="draft.accounts[${i}].from=this.value;updateSaveBar()" style="width:190px"></td>
+    <td><button class="btn sm danger" onclick="draft.accounts.splice(${i},1);render(true)">Supprimer</button></td></tr>`).join("");
+  return header("Comptes", "Les identifiants que vos applications utilisent pour se connecter au relais. Créez-en un par application pour savoir qui envoie quoi.") +
+    (!draft.require_auth ? banner("var(--amber)", "L'identification n'est pas exigée : ces comptes sont acceptés mais pas obligatoires.", "Changer", "reception") : "") + `
+  <div class="card">
+    ${draft.accounts.length ? `<div style="overflow-x:auto"><table><thead><tr><th>Actif</th><th>Identifiant</th><th>Mot de passe</th><th>Expéditeur (facultatif)</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>` : '<div class="empty">Aucun compte</div>'}
+    <div style="margin-top:12px"><button class="btn" onclick="addAccount()">＋ Ajouter un compte</button></div>
+    ${!draft.accounts.length && draft.require_auth ? '<p class="warn">⚠ Aucun compte : seules les adresses de confiance pourront envoyer.</p>' : ""}
+  </div>`;
+}
+
+function sendingView() {
+  const r = draft.relay, on = draft.mode === "Relay";
+  const presets = S.presets.map((p) => `<option ${p.name === r.preset ? "selected" : ""}>${esc(p.name)}</option>`).join("");
+  const hint = (S.presets.find((p) => p.name === r.preset) || {}).hint || "";
+  const sec = SECURITY.map(([k, l]) => `<label class="opt" style="display:inline-flex;margin-right:14px"><input type="radio" name="sec" ${r.security === k ? "checked" : ""} onchange="set('relay.security','${k}')"> ${l}</label>`).join("");
+  return header("Envoi", "Le relais transmet les e-mails au serveur de votre fournisseur de messagerie, qui les distribue.") + `
+  <div class="card"><h2>Que faire des e-mails reçus ?</h2>
+    <label class="opt"><input type="radio" name="mode" ${on ? "checked" : ""} onchange="set('mode','Relay');render(true)"><span><b>Les envoyer via mon fournisseur de messagerie</b><small>Fonctionnement normal.</small></span></label>
+    <label class="opt"><input type="radio" name="mode" ${!on ? "checked" : ""} onchange="set('mode','Capture');render(true)"><span><b>Mode test : les garder sans les envoyer</b><small>Pratique pour vérifier qu'une application arrive bien à se connecter.</small></span></label>
+  </div>
+  <div class="card" style="${on ? "" : "opacity:.55;pointer-events:none"}"><h2>Serveur d'envoi du fournisseur</h2><div class="form">
+    ${field("Fournisseur", "Choisissez votre fournisseur pour remplir le serveur et le port.", `<select onchange="pickPreset(this.value)">${presets}</select>${hint ? `<div class="hint" style="margin-top:6px">ⓘ ${esc(hint)}</div>` : ""}`)}
+    ${field("Serveur SMTP", "Adresse du serveur d'envoi, ex. smtp.gmail.com", input("relay.host", 'placeholder="smtp.exemple.fr"'))}
+    ${field("Port", "587 (STARTTLS) ou 465 (SSL/TLS) le plus souvent.", num("relay.port", 1, 65535))}
+    ${field("Sécurité", "", sec)}
+    ${field("Identifiant", "Souvent votre adresse e-mail complète.", input("relay.username", 'placeholder="vous@exemple.fr" autocomplete="off"'))}
+    ${field("Mot de passe", "Mot de passe de la boîte, ou « mot de passe d'application » (Gmail, Outlook).",
+      `<input type="${showPw.relay ? "text" : "password"}" id="f-relay.password" value="${esc(r.password)}" oninput="set('relay.password', this.value)" autocomplete="new-password" style="width:230px"> <button class="btn sm" onclick="showPw.relay=!showPw.relay;render(true)">${showPw.relay ? "Masquer" : "Afficher"}</button>`)}
+    ${field("Expéditeur imposé", "Facultatif. Beaucoup de fournisseurs (OVH, Gmail…) n'acceptent que votre propre adresse comme expéditeur : indiquez-la ici (moi@exemple.fr ou « Mon nom <moi@exemple.fr> »), l'adresse de l'application sera mise en « Répondre à ». Un expéditeur différent peut être choisi pour chaque compte dans l'onglet « Comptes ».", input("relay.force_from", 'placeholder="laisser vide pour garder celui de l\'application"'))}
+    ${field("Certificat", "À cocher seulement pour un serveur interne avec un certificat auto-signé.", check("relay.accept_invalid_certs", "Accepter les certificats non valides"))}
+    ${field("Nouvelles tentatives", "En cas d'erreur temporaire (serveur indisponible…).", `${num("max_attempts", 1, 50, "essais")} &nbsp;toutes les&nbsp; ${num("retry_minutes", 1, 1440, "min")}`)}
+  </div></div>
+  <div class="card"><h2>Vérifier</h2>
+    <div class="row"><button class="btn" ${on && r.host && !testing ? "" : "disabled"} onclick="testRelay()">Tester la connexion au fournisseur</button>${testing ? '<span class="muted">Connexion en cours…</span>' : ""}</div>
+    <div class="row" style="margin-top:12px">Envoyer un e-mail de test à
+      <input type="email" id="test-to" placeholder="vous@exemple.fr" style="width:260px"> <button class="btn primary" onclick="sendTest()">Envoyer</button></div>
+    <p class="small muted">Les réglages non enregistrés sont enregistrés avant l'envoi du test.</p>
+  </div>`;
+}
+
+function journalView() {
+  const colors = { info: "var(--muted)", ok: "var(--green)", warn: "var(--amber)", error: "var(--red)" };
+  const lines = S.events.map((e) => `<div class="log-line"><span class="dot" style="background:${colors[e.level]}"></span><span class="t">${fmtTime(e.time)}</span><span>${esc(e.text)}</span></div>`).join("");
+  return header("Journal", "Ce qui s'est passé depuis le démarrage : connexions, identifications, envois et erreurs.") +
+    `<div class="filters"><button class="btn" onclick="bulkEvents()">Effacer le journal</button></div><div class="card">${lines || '<div class="muted">Rien pour l\'instant.</div>'}</div>`;
+}
+
+function helpView() {
+  const c = S.config, host = appHost();
+  const acc = (c.accounts.find((a) => a.enabled) || {}).username || "(aucun compte)";
+  const docker = S.env.container ? `
+  <div class="card"><h2>Dans Docker</h2><ol class="steps">
+    <li>Si Dolibarr ou Immich tournent dans Docker sur le même serveur, mettez-les dans le même réseau Docker que le relais et utilisez l'hôte <code>relais-smtp</code> (le nom du conteneur).</li>
+    <li>Sinon, utilisez l'adresse du serveur et le port publié (par défaut <code>2525</code>).</li>
+    <li>Les réglages et les messages sont gardés dans le volume monté sur <code>${esc(S.env.data_dir)}</code>.</li>
+    <li>Le mot de passe de cette interface s'affiche dans les journaux du conteneur au premier démarrage (<code>docker logs relais-smtp</code>), ou se fixe avec la variable <code>ADMIN_PASSWORD</code>.</li>
+  </ol></div>` : "";
+  return header("Aide", "Configurer vos applications pour qu'elles envoient leurs e-mails par ce relais.") + `
+  <div class="card"><h2>Dolibarr</h2><ol class="steps">
+    <li>Menu Accueil &gt; Configuration &gt; E-mails, puis « Modifier ».</li>
+    <li>Méthode d'envoi : « SMTP/SMTPS socket library ».</li>
+    <li>Hôte SMTP : <code>${esc(host)}</code> &nbsp; Port : <code>${c.port}</code></li>
+    <li>Identifiant : <code>${esc(acc)}</code> &nbsp; Mot de passe : celui du compte (onglet « Comptes »).</li>
+    <li>TLS et STARTTLS : Non.</li>
+    <li>Enregistrez, puis utilisez « Envoyer un e-mail de test » en haut de la page.</li>
+  </ol></div>
+  <div class="card"><h2>Immich</h2><ol class="steps">
+    <li>Administration &gt; Paramètres &gt; Paramètres de notification &gt; E-mail.</li>
+    <li>Activez les notifications par e-mail.</li>
+    <li>Hôte : <code>${esc(host)}</code> &nbsp; Port : <code>${c.port}</code></li>
+    <li>Nom d'utilisateur : <code>${esc(acc)}</code> &nbsp; Mot de passe : celui du compte.</li>
+    <li>Adresse d'expédition : votre adresse (ex. photos@exemple.fr).</li>
+    <li>Cochez « Ignorer les erreurs de certificat » si l'option est proposée, puis « Envoyer un e-mail de test ».</li>
+  </ol></div>${docker}
+  <div class="card"><h2>Bon à savoir</h2><ol class="steps">
+    <li>N'ouvrez pas le port SMTP sur Internet : le relais est fait pour votre réseau local ou votre serveur.</li>
+    <li>Protégez l'accès à cette interface (mot de passe, et de préférence derrière un proxy HTTPS si elle est accessible de l'extérieur).</li>
+    <li>Réglages et messages : <code>${esc(S.env.data_dir)}</code></li>
+  </ol></div>`;
+}
+
+function loginView() {
+  return `<div class="login"><form class="card" onsubmit="login(event)">
+    <div class="brand" style="margin-bottom:10px"><div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">${ICONS.messages}</svg></div><div><b style="color:var(--text)">Relais SMTP</b><small>Interface de réglages</small></div></div>
+    <input type="password" id="pw" placeholder="Mot de passe" autocomplete="current-password">
+    <button class="btn primary" style="width:100%">Se connecter</button>
+    <p class="small muted">Au premier démarrage, le mot de passe est affiché dans les journaux du programme (<code>docker logs</code>).</p>
+  </form></div>`;
+}
+
+// ------------------------------------------------------------------ actions
+
+async function login(ev) {
+  ev.preventDefault();
+  try { await api("login", "POST", { password: $("pw").value }); needLogin = false; draft = null; await refresh(); render(true); }
+  catch (e) { toast(e.message, false); }
+}
+async function logout() { try { await api("logout", "POST"); } catch (_) {} needLogin = true; render(true); }
+async function serverCmd(c) { try { await api("server/" + c, "POST"); } catch (e) { toast(e.message, false); } refresh(); }
+async function msgCmd(id, c) {
+  try { if (c === "delete") await api("messages/" + id, "DELETE"); else await api(`messages/${id}/retry`, "POST"); } catch (e) { toast(e.message, false); }
+  refresh();
+}
+async function bulk(c) { try { await api("messages/" + c, "POST"); } catch (e) { toast(e.message, false); } refresh(); }
+async function bulkEvents() { try { await api("events/clear", "POST"); } catch (e) { toast(e.message, false); } refresh(); }
+function copy(v) { navigator.clipboard?.writeText(v).then(() => toast("Copié dans le presse-papiers"), () => toast("Copie impossible", false)); }
+function randomPw() { const c = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"; const a = new Uint32Array(16); crypto.getRandomValues(a); return Array.from(a, (x) => c[x % c.length]).join(""); }
+function addAccount() { draft.accounts.push({ username: "application" + (draft.accounts.length + 1), password: randomPw(), enabled: true, from: "" }); showPw[draft.accounts.length - 1] = true; render(true); }
+function pickPreset(name) {
+  const p = S.presets.find((x) => x.name === name);
+  draft.relay.preset = name;
+  if (p && p.host) { draft.relay.host = p.host; draft.relay.port = p.port; draft.relay.security = p.security; }
+  render(true);
+}
+async function save() {
+  try {
+    const r = await api("config", "PUT", draft);
+    toast(r.restarted ? "Réglages enregistrés, serveur redémarré." : "Réglages enregistrés.");
+    S.config = clone(draft); await refresh(); render(true);
+  } catch (e) { toast(e.message, false); }
+}
+function revert() { draft = clone(S.config); showPw = {}; render(true); }
+async function testRelay() {
+  testing = true; render(true);
+  try { const r = await api("relay/test", "POST", draft); toast(r.message); } catch (e) { toast("Échec : " + e.message, false); }
+  testing = false; render(true);
+}
+async function sendTest() {
+  const to = $("test-to").value.trim();
+  if (!to.includes("@")) return toast("Indiquez une adresse e-mail.", false);
+  if (dirty()) await save();
+  try { const r = await api("test-mail", "POST", { to }); toast(`Message de test n°${r.id} mis en file. Suivez-le dans « Messages ».`); refresh(); }
+  catch (e) { toast(e.message, false); }
+}
+async function changePassword() {
+  try { await api("password", "POST", { current: $("pw-cur").value, new: $("pw-new").value }); toast("Mot de passe modifié."); $("pw-cur").value = $("pw-new").value = ""; }
+  catch (e) { toast(e.message, false); }
+}
+async function showMessage(id) {
+  const m = S.messages.find((x) => x.id === id); if (!m) return;
+  let raw = "";
+  try { raw = (await api(`messages/${id}/raw`)).raw; } catch (e) { raw = e.message; }
+  const rows = [["Objet", m.subject], ["Expéditeur", m.from], ["Destinataires", m.to.join(", ")], ["Reçu", fmtTime(m.received)], ["Provenance", m.client],
+    ["Taille", (m.size / 1024).toFixed(1) + " Ko"], ["État", `${(STATUS[m.status] || [m.status])[0]} (${m.attempts} essai(s))`]];
+  if (m.last_error) rows.push(["Dernière erreur", m.last_error]);
+  $("modal-title").textContent = "Message n°" + id;
+  $("modal-body").innerHTML = `<div class="kv" style="grid-template-columns:140px 1fr;margin:0 0 12px">${rows.map(([k, v]) => `<span class="muted">${k}</span><span style="${k === "Dernière erreur" ? "color:var(--red)" : ""}">${esc(v)}</span>`).join("")}</div>
+    <div class="muted small">Contenu brut</div><pre class="raw">${esc(raw)}</pre>`;
+  $("modal").className = "modal-bg show";
+}
+function closeModal() { $("modal").className = "modal-bg"; }
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
+window.addEventListener("beforeunload", (e) => { if (dirty()) { e.preventDefault(); e.returnValue = ""; } });
+
+refresh().then(() => render(true));
+setInterval(refresh, 2500);
+</script>
+</body>
+</html>

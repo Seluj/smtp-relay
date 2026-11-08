@@ -1,0 +1,32 @@
+# Relais SMTP avec docker compose :  docker compose up -d
+# Interface web : http://<adresse-du-serveur>:8080
+# Mot de passe de l'interface : affiché par « docker compose logs relais-smtp » au premier démarrage
+# (ou fixez-le avec ADMIN_PASSWORD ci-dessous).
+
+services:
+  relais-smtp:
+    # Construit l'image à partir de ce dossier. Pour utiliser l'image publiée sur le registre,
+    # remplacez « build: . » par :  image: registry.selutech.fr/relais-smtp:latest
+    # (après un « docker login registry.selutech.fr » sur le serveur)
+    build: .
+    container_name: relais-smtp
+    restart: unless-stopped
+    ports:
+      - "2525:2525"   # SMTP : à indiquer dans Dolibarr / Immich
+      - "8080:8080"   # interface web de réglages
+    environment:
+      TZ: Europe/Paris
+      # ADMIN_PASSWORD: "choisissez-un-mot-de-passe"
+    volumes:
+      - relais-smtp-data:/data
+    networks:
+      - relais
+
+# Pour qu'Immich ou Dolibarr (dans d'autres fichiers compose) joignent le relais par le nom « relais-smtp »,
+# ajoutez-leur ce réseau :  networks: [relais]  et  networks: { relais: { external: true, name: relais } }
+networks:
+  relais:
+    name: relais
+
+volumes:
+  relais-smtp-data:

@@ -1,0 +1,21 @@
+# Compilation Rust
+/target/
+
+# Captures de l'interface produites par « relais-smtp --screenshot »
+/shots/
+
+# Données locales du relais (réglages, mots de passe, messages) si RELAIS_SMTP_DIR pointe ici
+/data/
+config.json
+*.json.tmp
+
+# Variables d'environnement et secrets
+.env
+.env.*
+
+# Système et éditeurs
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~

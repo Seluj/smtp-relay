@@ -1,0 +1,6 @@
+target
+shots
+.git
+.github
+*.md
+docker-compose.yml
