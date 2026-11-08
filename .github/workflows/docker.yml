@@ -12,7 +12,7 @@
 #     DEPLOY_PORT       port SSH (facultatif, 22 par défaut)
 #     SMTP_PUBLISH      port SMTP publié sur le serveur (facultatif, 2525 par défaut)
 #     WEB_PUBLISH       port de l'interface web publié sur le serveur (facultatif, 8080 par défaut)
-#     PLATFORMS         architectures de l'image (facultatif, « linux/amd64 » par défaut ;
+#     PLATFORMS         architectures de l'image (facultatif, « linux/arm64 » par défaut ;
 #                       « linux/amd64,linux/arm64 » pour un Raspberry Pi ou un NAS ARM, plus lent)
 #   Autres secrets :
 #     DEPLOY_SSH_KEY    clé SSH privée autorisée sur le serveur
@@ -44,7 +44,7 @@ jobs:
     outputs:
       image: ${{ steps.name.outputs.image }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Nom de l'image
         id: name
@@ -53,12 +53,12 @@ jobs:
           echo "repo=${repo}" >> "$GITHUB_OUTPUT"
           echo "image=${repo}:sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
 
       - name: Connexion à registry.selutech.fr
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ secrets.REGISTRY_USERNAME }}
@@ -66,7 +66,7 @@ jobs:
 
       - name: Étiquettes
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ steps.name.outputs.repo }}
           tags: |
@@ -77,50 +77,12 @@ jobs:
             type=sha,prefix=sha-,format=short
 
       - name: Construction et publication
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
-          platforms: ${{ vars.PLATFORMS || 'linux/amd64' }}
+          platforms: ${{ vars.PLATFORMS || 'linux/arm64' }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-  deploy:
-    name: Installer sur le serveur
-    needs: image
-    if: github.event_name != 'pull_request' && vars.DEPLOY_HOST != '' && (github.ref_type == 'tag' || github.ref_name == github.event.repository.default_branch)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Mise à jour du conteneur par SSH
-        uses: appleboy/ssh-action@v1
-        env:
-          IMAGE: ${{ needs.image.outputs.image }}
-          REGISTRY: ${{ env.REGISTRY }}
-          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
-          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
-          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
-          SMTP_PUBLISH: ${{ vars.SMTP_PUBLISH || '2525' }}
-          WEB_PUBLISH: ${{ vars.WEB_PUBLISH || '8080' }}
-        with:
-          host: ${{ vars.DEPLOY_HOST }}
-          username: ${{ vars.DEPLOY_USER }}
-          port: ${{ vars.DEPLOY_PORT || 22 }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          envs: IMAGE,REGISTRY,REGISTRY_USERNAME,REGISTRY_PASSWORD,ADMIN_PASSWORD,SMTP_PUBLISH,WEB_PUBLISH
-          script: |
-            set -eu
-            echo "$REGISTRY_PASSWORD" | docker login "$REGISTRY" -u "$REGISTRY_USERNAME" --password-stdin
-            docker pull "$IMAGE"
-            docker network inspect relais >/dev/null 2>&1 || docker network create relais
-            docker rm -f relais-smtp >/dev/null 2>&1 || true
-            set -- -d --name relais-smtp --restart unless-stopped --network relais \
-              -p "${SMTP_PUBLISH}:2525" -p "${WEB_PUBLISH}:8080" \
-              -e TZ=Europe/Paris -v relais-smtp-data:/data
-            if [ -n "${ADMIN_PASSWORD:-}" ]; then set -- "$@" -e "ADMIN_PASSWORD=${ADMIN_PASSWORD}"; fi
-            docker run "$@" "$IMAGE"
-            docker logout "$REGISTRY"
-            docker image prune -f >/dev/null
-            sleep 5
-            docker ps --filter name=relais-smtp --format 'Relais SMTP : {{.Status}}'
